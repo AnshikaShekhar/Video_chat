@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Real-Time Video Chat</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Animate.css for animations -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
+  <!-- Socket.IO -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+  <!-- Your JS -->
+  <script defer src="/script.js"></script>
+
+  <style>
+    body {
+      background: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80') no-repeat center center fixed;
+      background-size: cover;
+      overflow-y: auto;
+    }
+    .landing-overlay {
+      background: rgba(0, 0, 0, 0.7);
+      min-height: 100vh;
+    }
+    .chat-overlay {
+      background: rgba(0, 0, 0, 0.6);
+      min-height: 100vh;
+    }
+    .glass {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(15px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .video-container {
+      transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+      position: relative;
+    }
+    .video-container:hover {
+      transform: scale(1.05);
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+    }
+    .btn-glow {
+      box-shadow: 0 0 15px rgba(0, 255, 255, 0.6);
+      transition: box-shadow 0.3s ease-in-out;
+    }
+    .btn-glow:hover {
+      box-shadow: 0 0 25px rgba(0, 255, 255, 0.9);
+    }
+    .centered-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      max-width: 1200px;
+    }
+    .aligned-items {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+    }
+    .sidebar {
+      position: fixed;
+      right: 20px;
+      top: 20%;
+      width: 300px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+    .animate-pulse-slow {
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+    .muted::after {
+      content: '🔇';
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 24px;
+      color: red;
+    }
+    .notification {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 1rem 2rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      z-index: 50;
+      display: none;
+      animation: slideInDown 0.5s ease-out, fadeOut 0.5s ease-in 2.5s forwards;
+    }
+    .notification.success {
+      background-color: #10b981; /* Emerald green for success */
+      color: white;
+    }
+    .notification.warning {
+      background-color: #f59e0b; /* Amber for warnings/muting */
+      color: white;
+    }
+    .notification.error {
+      background-color: #ef4444; /* Red for errors */
+      color: white;
+    }
+    @keyframes slideInDown {
+      from {
+        transform: translateX(-50%) translateY(-100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+      }
+    }
+    @keyframes fadeOut {
+      from {
+        opacity: 1;
+      }
+      to {
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+<body class="text-white font-sans flex flex-col items-center justify-center overflow-y-auto">
+
+  <!-- Notification Container -->
+  <div id="notification" class="notification"></div>
+
+  <!-- Landing Section -->
+  <section class="w-full landing-overlay flex items-center justify-center py-20 px-4">
+    <div class="text-center max-w-4xl animate__animated animate__fadeIn animate__slower centered-content">
+      <h1 class="text-6xl font-extrabold mb-6 flex items-center justify-center">
+        <i class="fa-solid fa-video text-red-500 animate-pulse mr-3"></i>
+        Welcome to Real-Time Video Chat
+      </h1>
+      <p class="text-2xl text-gray-200 mb-8">Experience seamless, secure, and fast video communication with our cutting-edge platform. Connect with friends, colleagues, or anyone, anytime!</p>
+      <p class="text-lg text-gray-300 mb-10">Powered by WebRTC and Socket.IO for real-time performance <i class="fa-solid fa-plug ml-2 text-green-400"></i></p>
+      <button id="startChatBtn" class="bg-blue-600 hover:bg-blue-700 px-8 py-4 rounded-lg transition btn-glow flex items-center gap-2 mx-auto">
+        <i class="fa-solid fa-play mr-2"></i>Start Chatting Now
+      </button>
+    </div>
+  </section>
+
+  <!-- Video Chat Section -->
+  <section id="chatSection" class="w-full chat-overlay hidden flex-col items-center justify-center p-4 space-y-6">
+    <!-- Title -->
+    <div class="text-center animate__animated animate__fadeInDown animate__slower centered-content">
+      <h1 class="text-5xl font-extrabold mb-3 flex items-center justify-center">
+        <i class="fa-solid fa-video text-red-500 animate-pulse mr-2"></i>
+        Real-Time Video Chat
+      </h1>
+      <p class="text-gray-300 text-md animate__animated animate__fadeInUp">Secure • Fast • Live <i class="fa-solid fa-shield-alt ml-2 text-green-400"></i></p>
+    </div>
+
+    <!-- Room Input -->
+    <div class="flex gap-3 animate__animated animate__fadeInUp animate__delay-1s centered-content aligned-items">
+      <input id="roomInput" class="p-3 rounded-lg text-black w-72 focus:outline-none focus:ring-2 focus:ring-blue-400 glass" placeholder="Enter Room ID" />
+      <button id="joinBtn" class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg transition btn-glow flex items-center gap-2">
+        <i class="fa-solid fa-door-open mr-2"></i>Join
+      </button>
+      <button id="copyBtn" class="bg-gray-600 hover:bg-gray-700 px-6 py-3 rounded-lg transition btn-glow flex items-center gap-2 hidden">
+        <i class="fa-solid fa-copy"></i>
+      </button>
+    </div>
+
+    <!-- Video Grid -->
+    <div class="flex flex-col md:flex-row gap-8 animate__animated animate__zoomIn animate__delay-2s centered-content">
+      <div class="video-container">
+        <video id="localVideo" autoplay playsinline muted class="rounded-xl shadow-2xl w-96 h-72 bg-black border border-gray-600 transition-transform">
+          <div class="flex items-center justify-center h-full text-gray-400"><i class="fa-solid fa-user fa-2x"></i> You</div>
+        </video>
+      </div>
+      <div class="video-container">
+        <video id="remoteVideo" autoplay playsinline class="rounded-xl shadow-2xl w-96 h-72 bg-black border border-gray-600 transition-transform">
+          <div class="flex items-center justify-center h-full text-gray-400"><i class="fa-solid fa-user-friends fa-2x"></i> Peer</div>
+        </video>
+      </div>
+    </div>
+
+    <!-- Toggle Controls -->
+    <div class="flex gap-5 animate__animated animate__fadeInUp animate__delay-3s centered-content aligned-items">
+      <button id="toggleCamera" class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg transition btn-glow flex items-center gap-2">
+        <i class="fa-solid fa-video mr-2"></i><span>Toggle Camera</span>
+      </button>
+      <button id="toggleMic" class="bg-yellow-600 hover:bg-yellow-700 px-6 py-3 rounded-lg transition btn-glow flex items-center gap-2">
+        <i class="fa-solid fa-microphone mr-2"></i><span>Toggle Mic</span>
+      </button>
+      <button id="endCall" class="bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg transition btn-glow flex items-center gap-2">
+        <i class="fa-solid fa-phone-slash mr-2"></i><span>End Call</span>
+      </button>
+    </div>
+
+    <!-- Spinner -->
+    <div id="spinner" class="mt-6 hidden flex items-center justify-center gap-3 text-gray-300 animate__animated animate__fadeIn centered-content">
+      <svg class="animate-spin h-8 w-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+      </svg>
+      <span class="text-lg ml-2">Connecting to peer... <i class="fa-solid fa-spinner animate-spin ml-2"></i></span>
+    </div>
+
+    <!-- Status Messages -->
+    <div id="status" class="text-md text-gray-300 animate__animated animate__fadeIn animate__delay-4s centered-content"></div>
+    <div id="userCount" class="text-md text-gray-300 animate__animated animate__fadeIn animate__delay-4s centered-content">Connected: 1 <i class="fa-solid fa-users ml-2"></i></div>
+
+    <!-- Sidebar -->
+    <div class="sidebar animate__animated animate__fadeInRight">
+      <h2 class="text-2xl font-bold mb-4">Chat Info</h2>
+      <div class="mb-6">
+        <p class="text-lg">Current Time: <span id="clock" class="text-blue-300 animate-pulse-slow">03:18 PM IST, Thu, Jul 17, 2025</span></p>
+      </div>
+      <div class="mb-6">
+        <p class="text-lg">User: <span class="text-green-400">You</span></p>
+        <p class="text-lg">Status: <span class="text-yellow-400 animate__animated animate__flash animate__infinite animate__slower">Active</span></p>
+      </div>
+    </div>
+  </section>
+</body>
+</html>
