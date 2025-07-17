@@ -38,7 +38,7 @@ function showNotification(message, type = 'success') {
   }, 3000);
 }
 
-// Start Chatting Now functionality
+
 startChatBtn.onclick = () => {
   document.querySelector('.landing-overlay').classList.add('hidden');
   document.getElementById('chatSection').classList.remove('hidden');
@@ -46,7 +46,7 @@ startChatBtn.onclick = () => {
   roomID = "default-room";
   roomInput.value = roomID;
   showNotification('Default room set. Edit and join or click Join.', 'warning');
-  // Do not disable input or join immediately; let user edit
+  
 };
 
 joinBtn.onclick = async () => {
@@ -77,7 +77,7 @@ async function joinRoom() {
   try {
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     localVideo.srcObject = localStream;
-    localVideo.classList.toggle('muted', !audioEnabled); // Set initial mic state
+    localVideo.classList.toggle('muted', !audioEnabled); 
 
     peerConnection = new RTCPeerConnection(config);
     localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
@@ -154,7 +154,7 @@ socket.on('disconnect', () => {
   }
 });
 
-// Toggle camera
+
 toggleCamera.onclick = async () => {
   videoEnabled = !videoEnabled;
   if (localStream && peerConnection) {
@@ -188,7 +188,7 @@ toggleCamera.onclick = async () => {
   toggleCamera.textContent = videoEnabled ? 'Turn Off Camera' : 'Turn On Camera';
 };
 
-// Toggle mic
+
 toggleMic.onclick = async () => {
   audioEnabled = !audioEnabled;
   if (localStream) {
@@ -220,7 +220,7 @@ toggleMic.onclick = async () => {
   toggleMic.textContent = audioEnabled ? 'Mute Mic' : 'Unmute Mic';
 };
 
-// End call functionality
+
 endCall.onclick = () => {
   if (peerConnection) {
     peerConnection.close();
@@ -262,7 +262,7 @@ socket.on('user-left', () => {
   showNotification('Peer left the chat', 'warning');
 });
 
-// Renegotiate peer connection
+
 async function renegotiateConnection() {
   if (peerConnection && peerConnection.signalingState !== 'closed') {
     try {
@@ -275,7 +275,6 @@ async function renegotiateConnection() {
   }
 }
 
-// Update clock every second
 function updateClock() {
   const now = new Date();
   const options = { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata', weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' };
